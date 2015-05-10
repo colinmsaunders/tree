@@ -24,6 +24,25 @@ commands:
     move <a> <b>    -- move subtree at <a> under <b>
     sort            -- sort children
     count           -- dump tree with counts
+
+example:
+
+    $ cat in.txt
+    nana
+    gramps
+        mom
+            me
+        uncle bob
+        aunt sally
+    $ cat in.txt | ./tree.py add mom sister | ./tree.py clip mom | ./tree.py sort | ./tree.py count
+    0   3   3   7   gramps
+    1   1   0   1       aunt sally
+    1   2   3   4       mom
+    2   1   0   1           me  
+    2   1   0   1           sister
+    2   1   0   1           tom
+    1   1   0   1       uncle bob
+    0   1   0   1   nana
 '''
 
 INDENT = 4
