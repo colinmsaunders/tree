@@ -5,22 +5,36 @@
 import sys
 
 HELP = '''\
-tree -- "gnu" -like tree utility
+tree.py -- "gnu" -like tree utility
+
+a tree is a line based text file, indents indicate parent-child relationship
 
 usage:
 
-    $ tree < tree.txt
-    $ tree 
-    $ tree diff a.txt < b.txt
-    $ tree prune id ...
+    $ cat tree.txt | python tree.py [command] > tree2.txt
+
+commands:
+
+    help            -- show this help
+    cat             -- just parse input and write to stdout
+    clip <s>        -- "clip" first sub-tree that starts with <s>
+    prune <s>       -- "prune" first sub-tree that starts with <s>
+    find <s>        -- find node that starts with <s>
+    add <s> <n>     -- add new node under <s>
+    move <a> <b>    -- move subtree at <a> under <b>
+    sort            -- sort children
+    count           -- dump tree with counts
 '''
+
+INDENT = 4
+
 
 def output(s):
     sys.stdout.write(s.encode('utf-8'))
 
 
 def load(f):
-    root = [0, None, None, []]      # depth, parent, text, children
+    root = [0, None, None, []]      # indent, parent, text, children
     parent = root
     for i in f.readlines():
         i = i[:-1].decode('utf-8')
@@ -46,21 +60,35 @@ def load(f):
     return root
 
 
-def dump_helper(root, depth, indent):
-    output(' ' * (depth * indent))
+def count_under(root):
+    t = 1
+    h = 0
+    for i in root[3]:
+        a,b = count_under(i)
+        t += a
+        h = max(h, b)
+    return (t, h + 1)
+
+
+def dump_helper(root, depth, counts):
+    if counts:
+        # HACK: gross n^n algo
+        under, height = count_under(root)
+        output('%d\t%d\t%d\t%d\t' % (depth, height, len(root[3]), under))
+    output(' ' * (depth * INDENT))
     output(root[2])
     output('\n')
     for i in root[3]:
-        dump_helper(i, depth + 1, indent)
+        dump_helper(i, depth + 1, counts)
 
 
-def dump(root, indent = 4):
-    dump_helper(root, 0, indent)
+def dump(root, counts = False):
+    dump_helper(root, 0, counts)
     
 
-def dump_roots(root, indent = 4):
+def dump_roots(root, counts = False):
     for i in root[3]:
-        dump_helper(i, 0, indent)
+        dump_helper(i, 0, counts)
 
 
 def find(root, prefix):
@@ -71,6 +99,12 @@ def find(root, prefix):
         if None != x:
             return x
     return None
+
+
+def sort_children(root):
+    root[3].sort()
+    for i in root[3]:
+        sort_children(i)
 
 
 def main(argv):
@@ -105,6 +139,12 @@ def main(argv):
                     parent[3] = parent[3][:idx] + parent[3][idx + 1:]
         dump_roots(root)
 
+    elif 'find' == c:
+        root = load(sys.stdin)
+        n = find(root, argv[1])
+        if None != n:
+            output('%s\n' % n[2])
+
     elif 'add' == c:
         root = load(sys.stdin)
         n = find(root, argv[1])
@@ -114,6 +154,29 @@ def main(argv):
             else:
                 n[3].append([n[3][0][0], n, argv[2], []])
             dump_roots(root)
+
+    elif 'move' == c:
+        root = load(sys.stdin)
+        n1 = find(root, argv[1])
+        if 0 == len(argv[2]):
+            n2 = root
+        else:
+            n2 = find(root, argv[2])
+        if None != n1 and None != n2:
+            if 0 == len(n2[3]):
+                n2[3].append([n2[0] + 4, n2, n1[2], n1[3]])
+            else:
+                n2[3].append([n2[3][0][0], n2, n1[2], n1[3]])
+            dump_roots(root)
+ 
+    elif 'sort' == c:
+        root = load(sys.stdin)
+        sort_children(root)
+        dump_roots(root)
+     
+    elif 'count' == c:
+        root = load(sys.stdin)
+        dump_roots(root, True)
 
     else:
         print('i don\'t know how to "%s".' % c)
