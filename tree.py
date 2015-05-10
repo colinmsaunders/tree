@@ -32,9 +32,10 @@ example:
     gramps
         mom
             me
+            tom
         uncle bob
         aunt sally
-    $ cat in.txt | ./tree.py add mom sister | ./tree.py clip mom | ./tree.py sort | ./tree.py count
+    $ cat in.txt | ./tree.py add mom sister | ./tree.py sort | ./tree.py count
     0   3   3   7   gramps
     1   1   0   1       aunt sally
     1   2   3   4       mom
